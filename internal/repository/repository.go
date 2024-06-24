@@ -12,15 +12,10 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/glebarez/sqlite"
-	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
-
-type ContextKey string
-
-const ctxTxKey ContextKey = "TxKey"
 
 type Repository struct {
 	db *gorm.DB
@@ -40,42 +35,13 @@ func NewRepository(
 	}
 }
 
-type Transaction interface {
-	Transaction(ctx context.Context, fn func(ctx context.Context) error) error
-}
-
-func NewTransaction(r *Repository) Transaction {
-	return r
-}
-
-// DB return tx
-// If you need to create a Transaction, you must call DB(ctx) and Transaction(ctx,fn)
-func (r *Repository) DB(ctx context.Context) *gorm.DB {
-	v := ctx.Value(ctxTxKey)
-	if v != nil {
-		if tx, ok := v.(*gorm.DB); ok {
-			return tx
-		}
-	}
-	return r.db.WithContext(ctx)
-}
-
-func (r *Repository) Transaction(ctx context.Context, fn func(ctx context.Context) error) error {
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		ctx = context.WithValue(ctx, ctxTxKey, tx)
-		return fn(ctx)
-	})
-}
-
-func NewDB(conf *viper.Viper, l *log.Logger) *gorm.DB {
+func NewDB(driver, dsn string, l *log.Logger) *gorm.DB {
 	var (
 		db  *gorm.DB
 		err error
 	)
 
 	logger := zapgorm.New(l.Logger)
-	driver := conf.GetString("data.db.user.driver")
-	dsn := conf.GetString("data.db.user.dsn")
 
 	// GORM doc: https://gorm.io/docs/connecting_to_the_database.html
 	switch driver {
@@ -109,11 +75,11 @@ func NewDB(conf *viper.Viper, l *log.Logger) *gorm.DB {
 	return db
 }
 
-func NewRedis(conf *viper.Viper) *redis.Client {
+func NewRedis(addr, password string, db int) *redis.Client {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     conf.GetString("data.redis.addr"),
-		Password: conf.GetString("data.redis.password"),
-		DB:       conf.GetInt("data.redis.db"),
+		Addr:     addr,
+		Password: password,
+		DB:       db,
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
