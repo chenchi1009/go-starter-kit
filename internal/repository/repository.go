@@ -6,6 +6,7 @@ import (
 
 	"time"
 
+	"github.com/chenchi1009/go-starter-kit/internal/model"
 	"github.com/chenchi1009/go-starter-kit/pkg/log"
 	"github.com/chenchi1009/go-starter-kit/pkg/zapgorm"
 
@@ -23,6 +24,36 @@ type Repository struct {
 	logger *log.Logger
 }
 
+// Create implements UserReposisotry.
+func (r *Repository) Create(ctx context.Context, user *model.User) error {
+	panic("unimplemented")
+}
+
+// Delete implements UserReposisotry.
+func (r *Repository) Delete(ctx context.Context, id uint) error {
+	panic("unimplemented")
+}
+
+// GetByID implements UserReposisotry.
+func (r *Repository) GetByID(ctx context.Context, id uint) (*model.User, error) {
+	panic("unimplemented")
+}
+
+// GetByUsername implements UserReposisotry.
+func (r *Repository) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+	panic("unimplemented")
+}
+
+// List implements UserReposisotry.
+func (r *Repository) List(ctx context.Context, page int, pageSize int) ([]*model.User, error) {
+	panic("unimplemented")
+}
+
+// Update implements UserReposisotry.
+func (r *Repository) Update(ctx context.Context, user *model.User) error {
+	panic("unimplemented")
+}
+
 func NewRepository(
 	logger *log.Logger,
 	db *gorm.DB,
@@ -33,6 +64,20 @@ func NewRepository(
 		//rdb:    rdb,
 		logger: logger,
 	}
+}
+
+type Transaction interface {
+	Transaction(ctx context.Context, fn func(ctx context.Context) error) error
+}
+
+func NewTransaction(r *Repository) Transaction {
+	return r
+}
+
+func (r *Repository) Transaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return fn(ctx)
+	})
 }
 
 func NewDB(driver, dsn string, l *log.Logger) *gorm.DB {
